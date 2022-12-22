@@ -1,4 +1,4 @@
-# Godspeed towards the best ILP formulation for Sudoku
+# Godspeeding towards the best ILP formulation for Sudoku
 
 
 To Mr. Forrest,
@@ -7,7 +7,7 @@ Please refer: https://github.com/coin-or/Cbc/discussions/516
 
 I have been able to generate the files as suggested by you.
 
-Th input to the CBC would be the .lot and .lp file of the same Sudoku Size.
+The input to the CBC would be the .lot and .lp file of the same Sudoku Size. (.mps files are also generated in case it is necessary)
 
 I request your help to run some of these and suggest the way to run others.
 
@@ -19,8 +19,10 @@ PS.: I was highly inspired by this Youtube video (https://www.youtube.com/watch?
 
 Your help would help develop newer research avenues into lotsize/Bucket variables as an extension of the Binary.
 
-Thanking you in anticipation.
+Thanking you in anticipation, yours faithfully
+
 Santanu Banerjee
 
 https://www.linkedin.com/in/santanu-banerjee-093929150/
+
 https://oeis.org/wiki/User:Santanu_Banerjee
