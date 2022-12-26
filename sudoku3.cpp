@@ -93,10 +93,79 @@ public:
   /// Infeasibility - large is 0.5
   virtual double infeasibility(const OsiBranchingInformation *info,
     int &preferredWay) const;
+  /// Creates a branching object
+  virtual CbcBranchingObject *createCbcBranch(OsiSolverInterface *solver, const OsiBranchingInformation *info, int way);
 
 
 private:
   /// data
+};
+class CbcLotsizeBranchingObjectAlt : public CbcLotsizeBranchingObject {
+
+public:
+  /// Default constructor
+  CbcLotsizeBranchingObjectAlt();
+
+  /** Create a lotsize floor/ceiling branch object
+
+      Specifies a simple two-way branch. Let \p value = x*. One arm of the
+      branch will be is lb <= x <= valid range below(x*), the other valid range above(x*) <= x <= ub.
+      Specify way = -1 to set the object state to perform the down arm first,
+      way = 1 for the up arm.
+    */
+  CbcLotsizeBranchingObjectAlt(CbcModel *model, int variable,
+    int way, double value, const CbcLotsize *lotsize);
+
+  /** Create a degenerate branch object
+
+      Specifies a `one-way branch'. Calling branch() for this object will
+      always result in lowerValue <= x <= upperValue. Used to fix in valid range
+    */
+
+  CbcLotsizeBranchingObjectAlt(CbcModel *model, int variable, int way,
+    double lowerValue, double upperValue);
+
+  /// Copy constructor
+  CbcLotsizeBranchingObjectAlt(const CbcLotsizeBranchingObjectAlt &);
+
+  /// Assignment operator
+  CbcLotsizeBranchingObjectAlt &operator=(const CbcLotsizeBranchingObjectAlt &rhs);
+
+  /// Clone
+  virtual CbcBranchingObject *clone() const;
+
+  /// Destructor
+  virtual ~CbcLotsizeBranchingObjectAlt();
+
+  using CbcBranchingObject::branch;
+  /** \brief Sets the bounds for the variable according to the current arm
+           of the branch and advances the object state to the next arm.
+    */
+  virtual double branch();
+
+  using CbcBranchingObject::print;
+  /** \brief Print something about branch - only if log level high
+    */
+  //virtual void print();
+
+  /** Return the type (an integer identifier) of \c this */
+  //virtual CbcBranchObjType type() const
+  // {
+  //return LotsizeBranchObj;
+  //}
+
+  // LL: compareOriginalObject can be inherited from the CbcBranchingObject
+  // since variable_ uniquely defines the lot sizing object.
+
+  /** Compare the \c this with \c brObj. \c this and \c brObj must be os the
+        same type and must have the same original object, but they may have
+        different feasible regions.
+        Return the appropriate CbcRangeCompare value (first argument being the
+        sub/superset if that's the case). In case of overlap (and if \c
+        replaceIfOverlap is true) replace the current branching object with one
+        whose feasible region is the overlap.
+     */
+  //virtual CbcRangeCompare compareBranchingObject(const CbcBranchingObject *brObj, const bool replaceIfOverlap = false);
 };
 
 /* Return non-zero to return quickly */
@@ -116,20 +185,68 @@ static int callBack(CbcModel *model, int whereFrom)
       int numberColumns = solver->getNumCols();
       const double * lower = solver->getColLower();
       const double * upper = solver->getColUpper();
+      // get row copy
+      const CoinPackedMatrix *matrix = solver->getMatrixByRow();
+      const double *element = matrix->getElements();
+      const int *column = matrix->getIndices();
+      const CoinBigIndex *rowStart = matrix->getVectorStarts();
+      const int *rowLength = matrix->getVectorLengths();
+      // by column
+      const CoinPackedMatrix *matrix2 = solver->getMatrixByCol();
+      const int *row = matrix2->getIndices();
+      const CoinBigIndex *columnStart = matrix2->getVectorStarts();
+      const int *columnLength = matrix2->getVectorLengths();
       CbcObject **objects = new CbcObject *[numberColumns];
-      int size = numberColumns/3;
-      double pairs[200];
+      int size = sqrt(numberColumns);
+      double values[100];
       int coeff = 1;
       for (int i=0;i<size;i++) {
-	pairs[2*i] = coeff;
-	pairs[2*i+1] = coeff;
+	values[i]=coeff;
 	coeff *= 2;
       }
       int numberLot = 0;
       for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
 	if (upper[iColumn]>lower[iColumn]) {
 	  // create object
-	  objects[numberLot++] = new CbcLotsizeAlt(model, iColumn, size, pairs, true);
+	  double pairs[200];
+	  for (int i=0;i<size;i++) {
+	    pairs[2*i] = values[i];
+	    pairs[2*i+1] = values[i];
+	  }
+	  // take out
+	  for (CoinBigIndex i=columnStart[iColumn];
+	       i<columnStart[iColumn]+columnLength[iColumn];i++) {
+	    int iRow = row[i];
+	    for (CoinBigIndex j=rowStart[iRow];
+		 j<rowStart[iRow]+rowLength[iRow];j++) {
+	      int jColumn = column[j];
+	      if (upper[jColumn]==lower[jColumn]) {
+		// take out that size
+		double bound = upper[jColumn];
+		for (int i=0;i<size;i++) {
+		  if (pairs[2*i] == bound) {
+		    pairs[2*i] = -1.0;
+		    break;
+		  }
+		}
+	      }
+	    }
+	  }
+	  int n = 0;
+	  double smallest = 1.0e10;
+	  double largest = -1.0;
+	  for (int i=0;i<size;i++) {
+	    if (pairs[2*i]>=0.0) {
+	      smallest = CoinMin(smallest,pairs[2*i]);
+	      largest = CoinMax(largest,pairs[2*i]);
+	      pairs[2*n] = pairs[2*i];
+	      pairs[2*n+1] = pairs[2*i];
+	      n++;
+	    }
+	  }
+	  solver->setColLower(iColumn,smallest);
+	  solver->setColUpper(iColumn,largest);
+	  objects[numberLot++] = new CbcLotsizeAlt(model, iColumn, n, pairs, true);
 	}
       }
       int numberObjects = model->numberObjects();
@@ -137,6 +254,8 @@ static int callBack(CbcModel *model, int whereFrom)
       for (int iColumn = 0; iColumn < numberLot; iColumn++)
 	delete objects[iColumn];
       delete[] objects;
+      // say stop after solution
+      model->setMaximumSolutions(1);
       // Set priorities
       OsiObject ** objectsNow = model->objects();
       for (int i=0;i<numberObjects;i++)
@@ -243,6 +362,121 @@ double CbcLotsizeAlt::infeasibility(const OsiBranchingInformation *info,
   infeasibility *= value;
   return infeasibility;
 }
+CbcBranchingObject *
+CbcLotsizeAlt::createCbcBranch(OsiSolverInterface *solver, const OsiBranchingInformation * /*info*/, int way)
+{
+  //OsiSolverInterface * solver = model_->solver();
+  const double *solution = model_->testSolution();
+  const double *lower = solver->getColLower();
+  const double *upper = solver->getColUpper();
+  double value = solution[columnNumber_];
+  value = CoinMax(value, lower[columnNumber_]);
+  value = CoinMin(value, upper[columnNumber_]);
+  assert(!findRange(value));
+  return new CbcLotsizeBranchingObjectAlt(model_, columnNumber_, way,
+    value, this);
+}
+// Default Constructor
+CbcLotsizeBranchingObjectAlt::CbcLotsizeBranchingObjectAlt()
+  : CbcLotsizeBranchingObject()
+{
+}
+
+// Useful constructor
+CbcLotsizeBranchingObjectAlt::CbcLotsizeBranchingObjectAlt(CbcModel *model,
+  int variable, int way, double value,
+  const CbcLotsize *lotsize)
+  : CbcLotsizeBranchingObject(model, variable, way, value,lotsize)
+{
+}
+// Useful constructor for fixing
+CbcLotsizeBranchingObjectAlt::CbcLotsizeBranchingObjectAlt(CbcModel *model,
+  int variable, int way,
+  double lowerValue,
+  double upperValue)
+  : CbcLotsizeBranchingObject(model, variable, way, lowerValue,upperValue)
+{
+}
+
+// Copy constructor
+CbcLotsizeBranchingObjectAlt::CbcLotsizeBranchingObjectAlt(const CbcLotsizeBranchingObjectAlt &rhs)
+  : CbcLotsizeBranchingObject(rhs)
+{
+}
+
+// Assignment operator
+CbcLotsizeBranchingObjectAlt &
+CbcLotsizeBranchingObjectAlt::operator=(const CbcLotsizeBranchingObjectAlt &rhs)
+{
+  if (this != &rhs) {
+    CbcBranchingObject::operator=(rhs);
+    down_[0] = rhs.down_[0];
+    down_[1] = rhs.down_[1];
+    up_[0] = rhs.up_[0];
+    up_[1] = rhs.up_[1];
+  }
+  return *this;
+}
+CbcBranchingObject *
+CbcLotsizeBranchingObjectAlt::clone() const
+{
+  return (new CbcLotsizeBranchingObjectAlt(*this));
+}
+
+// Destructor
+CbcLotsizeBranchingObjectAlt::~CbcLotsizeBranchingObjectAlt()
+{
+}
+
+/*
+  Perform a branch by adjusting the bounds of the specified variable. Note
+  that each arm of the branch advances the object to the next arm by
+  advancing the value of way_.
+
+  Providing new values for the variable's lower and upper bounds for each
+  branching direction gives a little bit of additional flexibility and will
+  be easily extensible to multi-way branching.
+*/
+double
+CbcLotsizeBranchingObjectAlt::branch()
+{
+  decrementNumberBranchesLeft();
+  int iColumn = variable_;
+  if (way_ < 0) {
+#ifndef NDEBUG
+    {
+      double olb, oub;
+      olb = model_->solver()->getColLower()[iColumn];
+      oub = model_->solver()->getColUpper()[iColumn];
+#ifdef CBC_DEBUG
+      printf("branching down on var %d: [%g,%g] => [%g,%g]\n",
+        iColumn, olb, oub, down_[0], down_[1]);
+#endif
+      assert(olb < down_[0] + 1.0e-7 && oub > down_[1] - 1.0e-7);
+    }
+#endif
+    model_->solver()->setColLower(iColumn, down_[0]);
+    model_->solver()->setColUpper(iColumn, down_[1]);
+    way_ = 1;
+  } else {
+#ifndef NDEBUG
+    {
+      double olb, oub;
+      olb = model_->solver()->getColLower()[iColumn];
+      oub = model_->solver()->getColUpper()[iColumn];
+#ifdef CBC_DEBUG
+      printf("branching up on var %d: [%g,%g] => [%g,%g]\n",
+        iColumn, olb, oub, up_[0], up_[1]);
+#endif
+      assert(olb < up_[0] + 1.0e-7 && oub > up_[1] - 1.0e-7);
+    }
+#endif
+    model_->solver()->setColLower(iColumn, up_[0]);
+    model_->solver()->setColUpper(iColumn, up_[1]);
+    way_ = -1; // Swap direction
+  }
+  return 0.0;
+}
 int main(int argc, const char *argv[])
 {
   // Get data
@@ -323,6 +557,7 @@ int main(int argc, const char *argv[])
       get++;
     }
   }
+  fclose(fp);
   int block_size = (int)sqrt((double)size);
   /*************************************** 
      Now build rules for all different
@@ -423,7 +658,7 @@ int main(int argc, const char *argv[])
   if (size == 9)
     rhs = 45.0;
   else if (size == 16)
-    rhs = 120.0; // ??? doesn't look right
+    rhs = 136.0; // was 120 ???
   else if (size == 4)
     rhs = 10.0;
   for (row = 0; row < 3 * size; row++) {
@@ -569,6 +804,8 @@ int main(int argc, const char *argv[])
   }
   // Set this to get all solutions (all ones in newspapers should only have one)
   //model.setCutoffIncrement(-1.0e6);
+  // set this to exit without looking any further
+  model.setMaximumSolutions(1);
   /*************************************** 
      Do branch and bound
   ***************************************/
@@ -775,7 +1012,7 @@ int main(int argc, const char *argv[])
        Could copy arguments and add -quit at end to be safe
        but this will do
     */
-    const char *argv2[] = { "lotsizing", "-preprocess","off","-maxsol","1","-solve", "-quit" };
+    const char *argv2[] = { "lotsizing", "-preprocess","off","-solve", "-quit" };
     CbcMain1(3, argv2, modelA, callBack,solverData);
     // Solver was cloned so get current copy
     OsiSolverInterface *solver = model->solver();
