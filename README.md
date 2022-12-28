@@ -9,7 +9,7 @@ I have been able to generate the files as suggested by you. I followed the follo
 
 1) Used Gurobi to create solved Sudokus (all squares completely filled)
 2) Filtered the Sudoku to get rid of some random values from squares, with a certain probability (Obtained 3 sets of Output files as Sudoku sample problems)
-3) Created base files to solve these Sets using my new method of replacing each Sudoku value (x) with (2^(x-1))-1 and equating them to unique sums. The variables in this case would be Bucket/Lotsize {This is being Modelled in two ways: Once when the Lotsize variables are initially formulated as Binary and the Next when the Lotsize variables are formulated as Integer variables}
+3) Created base files to solve these Sets using my new method of replacing each Sudoku value (x) with (2^(x-1))-1 and equating them to unique sums. The variables in this case would be Bucket/Lotsize {This is being Modelled in two ways: Once when the Lotsize variables are initially formulated as Binary and the Next when the Lotsize variables are formulated as Integer variables} [Rounding off errors are present from Size 8 onwards and this has been reported to Gurobi Staff alongwih a request for introducing Bucket variables for testing: https://support.gurobi.com/hc/en-us/community/posts/9160893511185-Requesting-a-new-type-of-variable-introduction]
 4) Created base files to solve the sudoku Sets using the original method of using Binary variables with layers for each of the values.
 
 The input to the CBC would be the .lot and .lp file of the same Sudoku Sizes from the Base Files in 3). (.mps files are also generated in case it is necessary)
