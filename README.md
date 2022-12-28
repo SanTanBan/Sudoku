@@ -1,8 +1,5 @@
 # Godspeeding towards the best ILP formulation for Sudoku
 
-
-To Mr. Forrest,
-
 Please refer: https://github.com/coin-or/Cbc/discussions/516
 
 I have been able to generate the files as suggested by you. I followed the following steps and developed the folders for the same:-
@@ -20,7 +17,7 @@ I needed proof that this method is superior to the existing ILP with binary vari
 
 Motivation: I was highly inspired by this Youtube video (https://www.youtube.com/watch?v=YX40hbAHx3s) and understood that a faster Sudoku algorithm would help in Cancer research. I therfore have been trying to create a solution approach to Sudoku and using bucket variables flashed to me more than a year ago. I have been able to theoretically understand that the search space in my formulation would be much less. But computational proof has been elusive to me since for this I needed a Bucket/Lotsize variable and I am yet to recieve help from anywhere in this regard. (I had approached CBC maintainers multiple times as well as Gurobi staff.)
 
-Your help would develop newer research avenues into lotsize/Bucket variables as an extension of the Binary.
+Your help would possibly develop newer research avenues into lotsize/Bucket variables as an extension of the Binary.
 
 Thanking you in anticipation, yours faithfully
 
