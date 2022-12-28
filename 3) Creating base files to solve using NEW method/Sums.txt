@@ -1,0 +1,13 @@
+The lotsize variables are kept Binary
+
+0
+11
+502
+65519
+33554406
+68719476699
+562949953421262
+
+18446744073709551551
+
+The last sum is not proper in the LP or MPS files...
