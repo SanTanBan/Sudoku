@@ -25,5 +25,5 @@ Santanu Banerjee (https://www.linkedin.com/in/santanu-banerjee-093929150/)
 
 PS.:-
 I initially hunched that the Sudoku numbers is replaced with the Fibonacci Sequence would be able to solve it faster. 
-However later I developed this: https://oeis.org/wiki/User:Santanu_Banerjee thinking that the Conway Guy Sequence would be the actual deal which was also incorrect.
+However later I developed this: [https://oeis.org/wiki/User:Santanu_Banerjee](https://oeis.org/A349777) thinking that the Conway Guy Sequence would be the actual deal which was also incorrect.
 Ultimately the powers of 2 starting from 0, 1, 3, 7... is found to be the actual extension for Binary Variables.
