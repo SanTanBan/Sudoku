@@ -32,3 +32,6 @@ PS.:-
 I initially hunched that the Sudoku numbers is replaced with the Fibonacci Sequence would be able to solve it faster. 
 However later I developed this: [https://oeis.org/A349777] thinking that the Conway Guy Sequence would be the actual deal which was also incorrect.
 Ultimately the powers of 2 starting from 0, 1, 3, 7... is found to be the actual (possible) extension for Binary Variables...
+
+
+FYI: To solve Sudoku using a QC :: https://github.com/dWave-examples/Sudoku
